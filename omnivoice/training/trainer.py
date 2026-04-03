@@ -45,6 +45,14 @@ from omnivoice.training.checkpoint import save_checkpoint as engine_save_checkpo
 logger = logging.getLogger(__name__)
 
 
+def _to_device(batch, device):
+    """Move all tensors in a batch dict to the target device."""
+    return {
+        k: v.to(device, non_blocking=True) if isinstance(v, torch.Tensor) else v
+        for k, v in batch.items()
+    }
+
+
 class OmniTrainer:
     def __init__(
         self,
@@ -211,6 +219,7 @@ class OmniTrainer:
 
         with torch.no_grad():
             for eval_batch in self.eval_dataloader:
+                eval_batch = _to_device(eval_batch, self.accelerator.device)
                 outputs = self.model(**eval_batch)
                 local_loss_sum += outputs.loss.detach()
                 eval_count += 1
@@ -268,6 +277,8 @@ class OmniTrainer:
 
                 train_iterator = iter(self.train_dataloader)
                 batch = next(train_iterator)
+
+            batch = _to_device(batch, self.accelerator.device)
 
             with self.accelerator.accumulate(self.model):
                 outputs = self.model(**batch)
