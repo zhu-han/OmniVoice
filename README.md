@@ -14,17 +14,18 @@
   <a href="https://zhu-han.github.io/omnivoice"><img src="https://img.shields.io/badge/GitHub.io-Demo_Page-blue?logo=GitHub&style=flat-square"></a>
 </p>
 
-OmniVoice is a state-of-the-art zero-shot multilingual TTS model supporting more than 600 languages. Built on a novel diffusion language model architecture, it generates high-quality speech with superior inference speed, supporting voice cloning and voice design.
+OmniVoice is a state-of-the-art massive multilingual zero-shot text-to-speech (TTS) model supporting over 600 languages. Built on a novel diffusion language model-style architecture, it generates high-quality speech with superior inference speed, supporting voice cloning and voice design.
 
 **Contents**: [Key Features](#key-features) | [Installation](#installation) | [Quick Start](#quick-start) | [Python API](#python-api) | [Command-Line Tools](#command-line-tools) | [Training & Evaluation](#training--evaluation) | [Discussion](#discussion--communication) | [Citation](#citation)
 
 ## Key Features
 
-- **600+ Languages Supported**: The broadest language coverage among zero-shot TTS models ([full list](docs/languages.md))
+- **600+ Languages Supported**: The broadest language coverage among zero-shot TTS models ([full list](docs/languages.md)).
 - **Voice Cloning**: State-of-the-art voice cloning quality.
 - **Voice Design**: Control voices via assigned speaker attributes (gender, age, pitch, dialect/accent, whisper, etc.).
+- **Fine-grained Control**: Non-verbal symbols (e.g., `[laughter]`) and pronunciation correction via pinyin or phonemes.
 - **Fast Inference**: RTF as low as 0.025 (40x faster than real-time).
-- **Diffusion Language Model Architecture**: A clean, streamlined, and scalable design that delivers both quality and speed.
+- **Diffusion Language Model-Style Architecture**: A clean, streamlined, and scalable design that delivers both quality and speed.
 
 ---
 
@@ -104,7 +105,7 @@ For full usage, see the [Python API](#python-api) and [Command-Line Tools](#comm
 
 ## Python API
 
-The OmniVoice model supports three generation modes. All features in this section are also available via [command-line tools](#command-line-tools).
+OmniVoice supports three generation modes. All features in this section are also available via [command-line tools](#command-line-tools).
 
 ### Voice Cloning
 
@@ -177,7 +178,7 @@ See more detailed control in [docs/generation-parameters.md](docs/generation-par
 
 ### Non-Verbal & Pronunciation Control
 
-OmniVoice supports inline **non-verbal symbols** and **pronunciation hints** within the input text.
+OmniVoice supports inline **non-verbal symbols** and **pronunciation correction** within the input text.
 
 **Non-verbal symbols**: Insert tags like `[laughter]` directly in the text to add expressive non-verbal sounds.
 
@@ -185,7 +186,7 @@ OmniVoice supports inline **non-verbal symbols** and **pronunciation hints** wit
 audio = model.generate(text="[laughter] You really got me. I didn't see that coming at all.")
 ```
 
-Supported tags: `[laughter]`, `[confirmation-en]`, `[question-en]`, `[question-ah]`, `[question-oh]`, `[question-ei]`, `[question-yi]`, `[surprise-ah]`, `[surprise-oh]`, `[surprise-wa]`, `[surprise-yo]`, `[dissatisfaction-hnn]`, `[sniff]`, `[sigh]`
+Supported tags: `[laughter]`, `[sigh]`, `[confirmation-en]`, `[question-en]`, `[question-ah]`, `[question-oh]`, `[question-ei]`, `[question-yi]`, `[surprise-ah]`, `[surprise-oh]`, `[surprise-wa]`, `[surprise-yo]`, `[dissatisfaction-hnn]`.
 
 **Pronunciation control (Chinese)**: Use pinyin with tone numbers to correct specific character pronunciations.
 

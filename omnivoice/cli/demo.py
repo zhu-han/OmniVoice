@@ -243,8 +243,8 @@ def build_demo(
     def _gen_settings():
         with gr.Accordion("Generation Settings (optional)", open=False):
             sp = gr.Slider(
-                0.7,
-                1.3,
+                0.5,
+                1.5,
                 value=1.0,
                 step=0.05,
                 label="Speed",
