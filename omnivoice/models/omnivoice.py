@@ -630,15 +630,9 @@ class OmniVoice(PreTrainedModel):
             # Skip trimming when ref_text is user-provided, otherwise the
             # trimmed audio will no longer match the full transcript.
             if ref_text is None:
-                ref_wav = trim_long_audio(ref_wav, self.sampling_rate)
-            elif ref_wav.size(-1) / self.sampling_rate > 20.0:
-                logger.warning(
-                    "Reference audio is %.1fs long (>20s) and ref_text was "
-                    "provided, so automatic trimming is skipped. A long reference "
-                    "may cause slower generation and degraded quality.",
-                    ref_wav.size(-1) / self.sampling_rate,
+                ref_wav = trim_long_audio(
+                    ref_wav, self.sampling_rate, trim_threshold=20.0
                 )
-
             ref_wav = remove_silence(
                 ref_wav,
                 self.sampling_rate,
@@ -651,6 +645,15 @@ class OmniVoice(PreTrainedModel):
                     "Reference audio is empty after silence removal. "
                     "Try setting preprocess_prompt=False."
                 )
+
+        ref_duration = ref_wav.size(-1) / self.sampling_rate
+        if ref_duration > 20.0:
+            logger.warning(
+                "Reference audio is %.1fs long (>20s). This may cause slower "
+                "generation, higher memory usage, and degraded voice cloning "
+                "quality. We recommend trimming it to 3-10s.",
+                ref_duration,
+            )
 
         # Auto-transcribe if ref_text not provided
         if ref_text is None:
@@ -1073,12 +1076,10 @@ class OmniVoice(PreTrainedModel):
 
         # Build text tokens
         full_text = _combine_text(ref_text=ref_text, text=text)
+        wrapped_text = f"<|text_start|>{full_text}<|text_end|>"
         text_tokens = (
-            self.text_tokenizer(
-                f"<|text_start|>{full_text}<|text_end|>",
-                return_tensors="pt",
-            )
-            .input_ids.repeat(self.config.num_audio_codebook, 1)
+            _tokenize_with_nonverbal_tags(wrapped_text, self.text_tokenizer)
+            .repeat(self.config.num_audio_codebook, 1)
             .unsqueeze(0)
         ).to(
             self.device
@@ -1490,6 +1491,53 @@ def _get_time_steps(
     return timesteps
 
 
+_NONVERBAL_PATTERN = re.compile(
+    r"\[(laughter|sigh|confirmation-en|question-en|question-ah|question-oh|"
+    r"question-ei|question-yi|surprise-ah|surprise-oh|surprise-wa|"
+    r"surprise-yo|dissatisfaction-hnn)\]"
+)
+
+
+def _tokenize_with_nonverbal_tags(text: str, tokenizer) -> torch.Tensor:
+    """Tokenize text containing non-verbal tags, handling each tag independently.
+
+    Non-verbal tags are tokenized standalone to guarantee consistent token
+    IDs regardless of surrounding language context (Chinese, English, etc.).
+
+    Args:
+        text: Full text string potentially containing non-verbal tags.
+        tokenizer: HuggingFace text tokenizer instance.
+    Returns:
+        Token IDs tensor of shape (1, seq_len).
+    """
+    parts = []
+    last_end = 0
+    for m in _NONVERBAL_PATTERN.finditer(text):
+        if m.start() > last_end:
+            segment = text[last_end : m.start()]
+            ids = tokenizer(segment, add_special_tokens=False).input_ids
+            if ids:
+                parts.append(ids)
+        tag_ids = tokenizer(m.group(), add_special_tokens=False).input_ids
+        if tag_ids:
+            parts.append(tag_ids)
+        last_end = m.end()
+    if last_end < len(text):
+        segment = text[last_end:]
+        ids = tokenizer(segment, add_special_tokens=False).input_ids
+        if ids:
+            parts.append(ids)
+
+    if not parts:
+        result = tokenizer(text, return_tensors="pt").input_ids
+    else:
+        combined = []
+        for p in parts:
+            combined.extend(p)
+        result = torch.tensor([combined], dtype=torch.long)
+    return result
+
+
 def _combine_text(text, ref_text: Optional[str] = None) -> str:
 
     # combine with reference text if not None
@@ -1498,23 +1546,16 @@ def _combine_text(text, ref_text: Optional[str] = None) -> str:
     else:
         full_text = text.strip()
 
-    # replace \n with .
-    full_text = re.sub(r"[ \t]*\r?\n[\s]*", ".", full_text)
+    # filter out newline / carriage-return characters
+    full_text = re.sub(r"[\r\n]+", "", full_text)
+
+    # collapse consecutive spaces / tabs into a single space
+    full_text = re.sub(r"[ \t]+", " ", full_text)
 
     # remove spaces around chinese characters
     chinese_range = r"[\u4e00-\u9fff]"
     pattern = rf"(?<={chinese_range})\s+|\s+(?={chinese_range})"
     full_text = re.sub(pattern, "", full_text)
-
-    # Remove whitespace immediately before special emotion tags (except
-    # [laughter]).  During training these tags have no preceding space, so
-    # the text tokenizer would mis-tokenise them if spaces were present.
-    _EMOTION_TAGS = (
-        r"sigh|confirmation-en|question-en|question-ah|question-oh|"
-        r"question-ei|question-yi|surprise-ah|surprise-oh|surprise-wa|"
-        r"surprise-yo|dissatisfaction-hnn"
-    )
-    full_text = re.sub(rf"\s+(\[({_EMOTION_TAGS})\])", r"\1", full_text)
 
     return full_text
 
