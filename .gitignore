@@ -24,7 +24,7 @@ example.py
 results/
 examples/data*
 examples/download*
-examples/exp*/
+examples/exp*
 .claude/
 *.wav
 *.jsonl

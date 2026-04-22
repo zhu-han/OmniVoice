@@ -314,3 +314,9 @@ Explore them in [Community Projects](docs/community-projects.md).
       year={2026}
 }
 ```
+
+---
+
+## Disclaimer
+
+This project is intended only for academic research purposes. Users are strictly prohibited from using this model for unauthorized voice cloning, voice impersonation, fraud, scams, or any other illegal or unethical activities. All users shall ensure full compliance with applicable local laws, regulations, and ethical standards. The developers assume no liability for any misuse of this model and advocate for responsible AI development and use, encouraging the community to uphold safety and ethical principles in AI research and applications.
